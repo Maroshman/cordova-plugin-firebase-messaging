@@ -79,8 +79,22 @@ exports.onMessage =
  * });
  */
 function(callback, errorCallback) {
-    exec(callback, errorCallback, PLUGIN_NAME, "onMessage", []);
+    exec(function(payload) {
+        console.log(payload)
+        // Check for the noopener type in the data field
+        if (payload.data && payload.data.type === 'noopener') {
+            // Perform the desired action when type is 'noopener'
+            console.log('Received noopener type message');
+            // You can add custom actions here
+
+            return; // Exit without showing notification
+        }
+
+        // Call the original callback if type is not 'noopener'
+        callback(payload);
+    }, errorCallback, PLUGIN_NAME, "onMessage", []);
 };
+
 
 exports.onBackgroundMessage =
 /**
