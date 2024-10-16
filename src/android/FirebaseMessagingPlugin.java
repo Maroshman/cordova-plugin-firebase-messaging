@@ -2,17 +2,23 @@
 package by.chemerisuk.cordova.firebase;
 
 import android.Manifest;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.Handler;
 import android.util.Log;
 
 import androidx.core.app.NotificationManagerCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.RemoteMessage;
@@ -25,6 +31,10 @@ import org.apache.cordova.CordovaPlugin;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.Set;
 
 import by.chemerisuk.cordova.support.CordovaMethod;
@@ -49,6 +59,13 @@ public class FirebaseMessagingPlugin extends ReflectiveCordovaPlugin {
     private FirebaseMessaging firebaseMessaging;
     private CallbackContext requestPermissionCallback;
 
+    // Custom Variables
+    private static Context context;
+
+    public static Context getContext() {
+        return context;
+    }
+
     @Override
     protected void pluginInitialize() {
         FirebaseMessagingPlugin.instance = this;
@@ -56,6 +73,108 @@ public class FirebaseMessagingPlugin extends ReflectiveCordovaPlugin {
         firebaseMessaging = FirebaseMessaging.getInstance();
         notificationManager = getSystemService(cordova.getActivity(), NotificationManager.class);
         lastBundle = getNotificationData(cordova.getActivity().getIntent());
+
+        context = cordova.getActivity().getApplicationContext();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            registerNotificationChannels(1);
+        }
+    }
+
+    private File copySoundFileToInternalStorage(Context context, String fileName) {
+        File externalFile = new File(Environment.getExternalStorageDirectory(), "Music/Rocket/" + fileName);
+        File internalFile = new File(context.getFilesDir(), fileName);
+
+        try (FileInputStream fis = new FileInputStream(externalFile);
+             FileOutputStream fos = new FileOutputStream(internalFile)) {
+            byte[] buffer = new byte[1024];
+            int length;
+            while ((length = fis.read(buffer)) > 0) {
+                fos.write(buffer, 0, length);
+            }
+            return internalFile;
+        } catch (IOException e) {
+            Log.e(TAG, "Error copying sound file to internal storage", e);
+            return null;
+        }
+    }
+    
+    private void registerNotificationChannels(final int count) {
+        // Context context = FirebaseMessagingPlugin.getContext();
+        // Retry 5 times to get permission to read external storage, don't try to create channel without permissions
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+            createNotificationChannel("1", "Notification", "notification.mp3");
+            createNotificationChannel("4", "Urgent Notification", "urgent_notification.mp3");
+        } else if (count < 5) {
+            Log.e(TAG, "Permission denied to read external storage custom sounds");
+            // Create a Handler instance
+            Handler handler = new Handler();
+            // Use postDelayed to execute a Runnable after a delay
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    // Code to be executed after the delay
+                    registerNotificationChannels(count + 1);
+                }
+            }, 30000); // Delay in milliseconds
+        }
+    }
+
+    private void createNotificationChannel(String channelId, String channelName, String soundFileName) {
+        NotificationChannel channel = notificationManager.getNotificationChannel(channelId);
+        if (channel != null) {
+            Log.e(TAG, "Channel already exist: " + channelId);
+            // notificationManager.deleteNotificationChannel(channelId);
+            return;
+        }
+        channel = new NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH);
+        // Construct the file path
+        String filePath = "/storage/emulated/0/Music/Rocket/" + soundFileName;
+        // Create a File object
+        File soundFile = new File(filePath);
+        // File file = new File(Environment.getExternalStorageDirectory(), "Music/Rocket/urgent_notification.mp3");
+        Context context = FirebaseMessagingPlugin.getContext();
+
+        // Check if the file exists
+        if (soundFile.exists()) {
+            File internalSoundFile = copySoundFileToInternalStorage(context, soundFileName);
+            Uri soundUri = null;
+            if (internalSoundFile != null) {
+                soundUri = FileProvider.getUriForFile(context, context.getPackageName() + ".fileprovider", internalSoundFile);
+                Log.e(TAG, soundUri.toString());
+                // AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                //         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                //         .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                //         .build();
+                // channel.setSound(soundUri, audioAttributes);
+            } else {
+                Log.e(TAG, "Failed to copy sound file to internal storage");
+                return;
+            }
+
+            // Parse the URI
+            Log.e(TAG, "Found custom sound " + soundFileName + " URI: " + soundUri.toString());
+
+            // Playing the sound for testing
+            // MediaPlayer mediaPlayer = new MediaPlayer();
+            // try {
+            //     mediaPlayer.setDataSource(soundFile.getAbsolutePath());
+            //     mediaPlayer.prepare();
+            //     mediaPlayer.start();
+            // } catch (Exception e) {
+            //     Log.e(TAG, "Error playing sound " + soundFileName);
+            // }
+
+            channel.setSound(soundUri, new AudioAttributes.Builder()
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                    .build());
+            Log.e(TAG, "Creating channel " + channelId);
+            notificationManager.createNotificationChannel(channel);
+        } else {
+            // Handle the case where the file does not exist
+            Log.e(TAG, "Not found custom sound " + soundFileName);
+        }
     }
 
     @CordovaMethod(WORKER)
