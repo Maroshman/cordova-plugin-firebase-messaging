@@ -137,22 +137,9 @@ public class FirebaseMessagingPlugin extends ReflectiveCordovaPlugin {
 
         // Check if the file exists
         if (soundFile.exists()) {
-            File internalSoundFile = copySoundFileToInternalStorage(context, soundFileName);
-            Uri soundUri = null;
-            if (internalSoundFile != null) {
-                soundUri = FileProvider.getUriForFile(context, context.getPackageName() + ".fileprovider", internalSoundFile);
-                Log.e(TAG, soundUri.toString());
-                // AudioAttributes audioAttributes = new AudioAttributes.Builder()
-                //         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                //         .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                //         .build();
-                // channel.setSound(soundUri, audioAttributes);
-            } else {
-                Log.e(TAG, "Failed to copy sound file to internal storage");
-                return;
-            }
 
-            // Parse the URI
+            // Getting URI using FileProvider, neccessary permissions are added in AndroidManifest.xml
+            Uri soundUri = FileProvider.getUriForFile(context, context.getPackageName() + ".fileprovider", soundFile);
             Log.e(TAG, "Found custom sound " + soundFileName + " URI: " + soundUri.toString());
 
             // Playing the sound for testing

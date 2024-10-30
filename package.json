@@ -12,15 +12,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/chemerisuk/cordova-plugin-firebase-messaging.git"
+    "url": "git+https://github.com/Maroshman/cordova-plugin-firebase-messaging.git"
   },
-  "author": "Maksim Chemerisuk <chemerisuk@gmail.com> (https://github.com/chemerisuk)",
+  "author": "Maros Hrebik <maroshman@gmail.com> (https://github.com/Maroshman)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/chemerisuk/cordova-plugin-firebase-messaging/issues"
+    "url": "https://github.com/Maroshman/cordova-plugin-firebase-messaging/issues"
   },
-  "homepage": "https://github.com/chemerisuk/cordova-plugin-firebase-messaging#readme",
-  "funding": "https://github.com/chemerisuk/cordova-plugin-firebase-messaging?sponsor=1",
+  "homepage": "https://github.com/Maroshman/cordova-plugin-firebase-messaging#readme",
+  "funding": "https://github.com/Maroshman/cordova-plugin-firebase-messaging?sponsor=1",
   "keywords": [
     "cordova",
     "firebase",
