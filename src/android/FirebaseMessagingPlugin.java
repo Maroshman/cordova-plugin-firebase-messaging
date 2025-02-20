@@ -103,8 +103,8 @@ public class FirebaseMessagingPlugin extends ReflectiveCordovaPlugin {
         // Context context = FirebaseMessagingPlugin.getContext();
         // Retry 5 times to get permission to read external storage, don't try to create channel without permissions
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-            createNotificationChannel("1", "Notification", "notification.mp3");
-            createNotificationChannel("4", "Urgent Notification", "urgent_notification.mp3");
+            manageCustomChannel("1", "Notification", "notification.mp3");
+            manageCustomChannel("4", "Urgent Notification", "urgent_notification.mp3");
         } else if (count < 5) {
             Log.e(TAG, "Permission denied to read external storage custom sounds");
             // Create a Handler instance
@@ -120,14 +120,8 @@ public class FirebaseMessagingPlugin extends ReflectiveCordovaPlugin {
         }
     }
 
-    private void createNotificationChannel(String channelId, String channelName, String soundFileName) {
+    private void manageCustomChannel(String channelId, String channelName, String soundFileName) {
         NotificationChannel channel = notificationManager.getNotificationChannel(channelId);
-        if (channel != null) {
-            Log.e(TAG, "Channel already exist: " + channelId);
-            // notificationManager.deleteNotificationChannel(channelId);
-            return;
-        }
-        channel = new NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH);
         // Construct the file path
         String filePath = "/storage/emulated/0/Music/Rocket/" + soundFileName;
         // Create a File object
@@ -151,7 +145,8 @@ public class FirebaseMessagingPlugin extends ReflectiveCordovaPlugin {
             // } catch (Exception e) {
             //     Log.e(TAG, "Error playing sound " + soundFileName);
             // }
-
+            
+            channel = new NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH);
             channel.setSound(soundUri, new AudioAttributes.Builder()
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                     .setUsage(AudioAttributes.USAGE_NOTIFICATION)
@@ -161,6 +156,10 @@ public class FirebaseMessagingPlugin extends ReflectiveCordovaPlugin {
         } else {
             // Handle the case where the file does not exist
             Log.e(TAG, "Not found custom sound " + soundFileName);
+            if (channel != null) {
+                Log.e(TAG, "No soundfile, deleting channel: " + channelId);
+                notificationManager.deleteNotificationChannel(channelId);
+            }
         }
     }
 
