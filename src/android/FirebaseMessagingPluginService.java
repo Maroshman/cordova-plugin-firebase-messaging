@@ -73,21 +73,23 @@ public class FirebaseMessagingPluginService extends FirebaseMessagingService {
             NotificationChannel defaultChannel = notificationManager.getNotificationChannel(defaultNotificationChannel);
             if (defaultChannel == null) {
                 NotificationChannel channel = new NotificationChannel(defaultNotificationChannel, "default", NotificationManager.IMPORTANCE_HIGH);
-                String defaultFilePath = "/storage/emulated/0/Music/Rocket/notification.mp3";
-                File defaultSoundFile = new File(defaultFilePath);
-                Context context = FirebaseMessagingPlugin.getContext();
-                if (defaultSoundFile.exists()) {
-                    // Getting URI using FileProvider, neccessary permissions are added in AndroidManifest.xml
-                    Uri soundUri = FileProvider.getUriForFile(context, context.getPackageName() + ".fileprovider", defaultSoundFile);
+                // String defaultFilePath = "/storage/emulated/0/Music/Rocket/notification.mp3";
+                // File defaultSoundFile = new File(defaultFilePath);
+                // Context context = FirebaseMessagingPlugin.getContext();
+                // if (defaultSoundFile.exists()) {
+                //     // Getting URI using FileProvider, neccessary permissions are added in AndroidManifest.xml
+                //     Uri soundUri = FileProvider.getUriForFile(context, context.getPackageName() + ".fileprovider", defaultSoundFile);
 
-                    channel.setSound(soundUri, new AudioAttributes.Builder()
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                        .build());
-                    Log.e(TAG, "Setting custom sound to default channel.");
-                }
-                Log.e(TAG, "Creating default channel with custom sound.");
+                //     channel.setSound(soundUri, new AudioAttributes.Builder()
+                //         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                //         .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                //         .build());
+                //     Log.e(TAG, "Setting custom sound to default channel.");
+                // }
+                Log.e(TAG, "Creating default channel.");
                 notificationManager.createNotificationChannel(channel);
+            } else {
+                Log.e(TAG, "Default channel already exists.");
             }
         }
     }
