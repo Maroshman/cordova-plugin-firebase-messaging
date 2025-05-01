@@ -35,6 +35,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Set;
 
 import by.chemerisuk.cordova.support.CordovaMethod;
@@ -103,8 +105,8 @@ public class FirebaseMessagingPlugin extends ReflectiveCordovaPlugin {
         // Context context = FirebaseMessagingPlugin.getContext();
         // Retry 5 times to get permission to read external storage, don't try to create channel without permissions
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-            manageCustomChannel("1", "Notification", "notification.mp3");
-            manageCustomChannel("4", "Urgent Notification", "urgent_notification.mp3");
+            createCustomChannel("1", "Notification", "fcm_notification");
+            createCustomChannel("4", "Urgent Notification", "fcm_urgent_notification");
         } else if (count < 5) {
             Log.e(TAG, "Permission denied to read external storage custom sounds");
             // Create a Handler instance
@@ -120,46 +122,48 @@ public class FirebaseMessagingPlugin extends ReflectiveCordovaPlugin {
         }
     }
 
-    private void manageCustomChannel(String channelId, String channelName, String soundFileName) {
+    private void createCustomChannel(String channelId, String channelName, String soundFileName) {
         NotificationChannel channel = notificationManager.getNotificationChannel(channelId);
-        // Construct the file path
-        String filePath = "/storage/emulated/0/Music/Rocket/" + soundFileName;
-        // Create a File object
-        File soundFile = new File(filePath);
-        // File file = new File(Environment.getExternalStorageDirectory(), "Music/Rocket/urgent_notification.mp3");
-        Context context = FirebaseMessagingPlugin.getContext();
+        if (channel != null) {
+            Log.e(TAG, "Channel for " + channelName + " already exists");
+            return;
+        }
+        Uri soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/raw/" + soundFileName);
+        
+        channel = new NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH);
+        channel.setSound(soundUri, new AudioAttributes.Builder()
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .build());
+        Log.e(TAG, "Creating channel " + channelId + " with sound " + soundFileName);
+        notificationManager.createNotificationChannel(channel);
+    }
 
-        // Check if the file exists
-        if (soundFile.exists()) {
+    public boolean copyFromAssetsToMusic(Context context, String filename) {
+        String musicDirPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC) + "/Rocket";
+        File destDir = new File(musicDirPath);
+        if (!destDir.exists()) {
+            destDir.mkdirs();
+        }
 
-            // Getting URI using FileProvider, neccessary permissions are added in AndroidManifest.xml
-            Uri soundUri = FileProvider.getUriForFile(context, context.getPackageName() + ".fileprovider", soundFile);
-            Log.e(TAG, "Found custom sound " + soundFileName + " URI: " + soundUri.toString());
+        File outFile = new File(destDir, filename);
 
-            // Playing the sound for testing
-            // MediaPlayer mediaPlayer = new MediaPlayer();
-            // try {
-            //     mediaPlayer.setDataSource(soundFile.getAbsolutePath());
-            //     mediaPlayer.prepare();
-            //     mediaPlayer.start();
-            // } catch (Exception e) {
-            //     Log.e(TAG, "Error playing sound " + soundFileName);
-            // }
-            
-            channel = new NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH);
-            channel.setSound(soundUri, new AudioAttributes.Builder()
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                    .build());
-            Log.e(TAG, "Creating channel " + channelId);
-            notificationManager.createNotificationChannel(channel);
-        } else {
-            // Handle the case where the file does not exist
-            Log.e(TAG, "Not found custom sound " + soundFileName);
-            if (channel != null) {
-                Log.e(TAG, "No soundfile, deleting channel: " + channelId);
-                notificationManager.deleteNotificationChannel(channelId);
+        try (InputStream in = context.getAssets().open("www/sound/fcm_" + filename);
+             OutputStream out = new FileOutputStream(outFile)) {
+
+            byte[] buffer = new byte[1024];
+            int read;
+            while ((read = in.read(buffer)) != -1) {
+                out.write(buffer, 0, read);
             }
+
+            out.flush();
+            Log.d("Copy", "File copied to: " + outFile.getAbsolutePath());
+            return true;
+
+        } catch (IOException e) {
+            Log.e("Copy", "Failed to copy file", e);
+            return false;
         }
     }
 
